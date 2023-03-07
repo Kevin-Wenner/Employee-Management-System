@@ -140,13 +140,24 @@ function addColum(sql, questions){
     .prompt(questions)
         .then((response) => {
             // make an obj that can pass KVP to query
-            
+            const temp = [];
             switch (sql) {
                 case `INSERT INTO employees(first_name, last_name, roles_id, manager_id)`:
                     sql += " VALUES (?, ?, ?, ?)";
-                    temp.push(response.first_name, response.last_name, response.role, response.manager);
+                    temp.push(response.first_name, response.last_name);
                     view = "SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name_ AS department, roles.salary FROM employees, roles, departments WHERE departments.id = roles.department_id AND roles.id = employees.role_id ORDER BY employees.id ASC";
                     table = "Employees"
+                    db.query(`SELECT roles.id, roles.title FROM roles`, (error, data) => {
+                        if (error) throw error;
+                        const roles = data.map(({ id, title }) => ({ name: title, value: id }));
+                        console.log(roles);
+                        db.query(`SELECT * FROM employee`, (err, data) => ({
+                            name: first_name + " " + last_name,
+                            value: id,
+                        }));
+                    });
+                        
+                    
                     break;
                 case `INSERT INTO roles(title, salary)`:
                     sql += " VALUES (?, ? , ?)";
