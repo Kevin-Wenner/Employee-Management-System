@@ -34,6 +34,60 @@ const initialQuestion = [
     }
 ]
 
+const employeeQuestions = [
+    {
+        type: "input",
+        name: "fist_name",
+        massage: "Enter Employee's first name"
+    },
+    {
+        type: "input",
+        name: "last_name",
+        message: "Enter Employee's last name"
+    },
+    {
+        type: "list",
+        name: "role",
+        message: "Select and role",
+        choices: ["Sales Lead", "Salesperson", "Lead engineer", "Software Engineer", "Account Manager", "Accountant", "Legal Team Lead", "Lawyer"]
+    },
+    {
+        type: "input",
+        name: "manager",
+        message: "Enter Employee's Manager id"
+    }
+];
+
+const roleQuestions = [
+    {
+        type: "input",
+        name: "title",
+        message: "Enter the new roles title"
+    },
+    {
+        type: "input",
+        name: "salary",
+        message: "Enter the new roles title"
+    },
+    {
+        type: "list",
+        name: "dpartment_id",
+        message: "Select the roles corisponding department",
+        choices: ["Sales", "Marketing", "Fiance", "Egineering"]
+    },
+];
+
+const departmentQuestions = [
+    {
+        type: "input",
+        name: "name",
+        message: "Enter the new Department name"
+    }
+];
+
+const RoleUpdateQuestions = [
+
+]
 function init(){
     
     return inquirer 
@@ -42,32 +96,25 @@ function init(){
             console.log(response);
             switch(response.action){
                 case "View all Employees":
-                    console.log("Employees Listed");
-                    getTable("SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name_ AS department, roles.salary FROM employees, roles, departments WHERE departments.id = roles.department_id AND roles.id = employees.role_id ORDER BY employees.id ASC");
+                    getTable("SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name_ AS department, roles.salary FROM employees, roles, departments WHERE departments.id = roles.department_id AND roles.id = employees.role_id ORDER BY employees.id ASC", "Employees");
                     break;
                 case "View All Roles":
-                    console.log("Roles Listed");
-                    getTable("SELECT roles.id, roles.title, departments.name_ AS department From roles INNER JOIN departments ON roles.department_id = department_id"); 
+                    getTable("SELECT roles.id, roles.title, departments.name_ AS department From roles INNER JOIN departments ON roles.department_id = department_id", "Roles"); 
                     break;
                 case "View All Departments":
-                    console.log("Departments Listed");
-                    getTable('SELECT departments.id AS id, departments.name_ AS department FROM departments');            
+                    getTable('SELECT departments.id AS id, departments.name_ AS department FROM departments', "Departments");            
                     break;
                 case "Add Employee":
-                    console.log("Adding Employee");
-                    addColum(`INSERT INTO employee(first_name, last_name)`,[body.first_name, body.last_name]);
+                    addColum(`INSERT INTO employee(first_name, last_name, roles_id, manager_id)`, employeeQuestions);
                     break;
                 case "Add Role":
-                    console.log("Adding Role");
-                    addColum(`INSERT INTO roles(title, salary)`, [body.title, body.salary]);
+                    addColum(`INSERT INTO roles(title, salary)`, roleQuestions);
                     break;
                 case "Add Department":
-                    console.log("Adding Department");
-                    addColum(`INSERT INTO department(name)`, [body.title]);
+                    addColum(`INSERT INTO department(name)`, departmentQuestions);
                     break;
                 case "Update Employee Role":
-                    console.log("Employee's Role Updating");
-                    updateColum('UPDATE roles SET role = ? WHERE id = ?', [req.body.role, req.params.id]);
+                    updateColum('UPDATE roles SET role = ? WHERE id = ?', RoleUpdateQuestions);
                     break;
                 default:
                     break;
@@ -75,45 +122,68 @@ function init(){
         })
 }
 
-function getTable(sql){
+function getTable(sql, table){
     db.query(sql, (err, rows) => {
         if(err){
             throw err;
         }
-        console.log("--------------------------------------");
-        // console.log("List of Departments:\n");
-        console.log(rows);
-        return rows
+        console.log("\n--------------------------------------");
+        console.log(`List of ${table}:\n`);
+        console.table(rows);
     })
+    console.log("--------------------------------------");
     init();
 }
 
-function addColum(sql, params){
-    db.query(sql, params, (err, rows) => {
-        if(err){
-            res.status(500).jason({err: err.message});
-            return;
-        }
-        console.log(param);
-        return 
-    })
+function addColum(sql, questions){
+    return inquirer
+    .prompt(questions)
+        .then((response) => {
+            // make an obj that can pass KVP to query
+            
+            switch (sql) {
+                case `INSERT INTO employees(first_name, last_name, roles_id, manager_id)`:
+                    sql += " VALUES (?, ?, ?, ?)";
+                    temp.push(response.first_name, response.last_name, response.role, response.manager);
+                    view = "SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name_ AS department, roles.salary FROM employees, roles, departments WHERE departments.id = roles.department_id AND roles.id = employees.role_id ORDER BY employees.id ASC";
+                    table = "Employees"
+                    break;
+                case `INSERT INTO roles(title, salary)`:
+                    sql += " VALUES (?, ? , ?)";
+                    temp.push(response.title, response.salary, response.deparment_id);
+                    view = "SELECT roles.id, roles.title, departments.name_ AS department From roles INNER JOIN departments ON roles.department_id = department_id";
+                    table = "Roles"
+                    break;
+                case `INSERT INTO departments(name)`:
+                    sql += " VALUES (?)";
+                    temp.push(response.name);
+                    view = 'SELECT departments.id AS id, departments.name_ AS department FROM departments';
+                    table = "Department"
+                    break;
+                default:
+                    break;
+            }         
+            db.query(sql, temp, (err, data)=>{
+                console.log(sql);
+                console.log(temp);
+                if (err) {
+                    throw err;
+                } 
+            console.log("Employee successfully added");
+            getTable(view, table);
+            })
+        })
     init();
 }
 
-function updateColum(sql, params){
+function updateColum(sql, questions){
     db.query(sql, params,(err, result) => {
         if (err) {
-            res.status(400).json({ error: err.message });
+            throw err;
         } else if (!result.affectedRows) {
-            res.json({
-              message: 'Employee not found'
-            });
+            console.log("Employee not found");
         } else {
-            res.json({
-              message: 'success',
-              data: req.body,
-              changes: result.affectedRows
-            });
+            
         }
     })
     init();
